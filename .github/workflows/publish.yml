@@ -1,0 +1,126 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - ton_connect-v*
+      - ton_connect_ui-v*
+
+jobs:
+  publish:
+    name: Publish to pub.dev
+    runs-on: ubuntu-latest
+    # Without a limit, a publish waiting for authorisation that will never come
+    # holds a runner for six hours. pub prompts interactively when it cannot
+    # authenticate, and there is no terminal to answer it.
+    timeout-minutes: 15
+    permissions:
+      # pub.dev authenticates the workflow by its OIDC token, so no secret is
+      # stored anywhere. It has to be enabled per package on pub.dev first,
+      # under Admin, which is only possible once the package exists — so the
+      # very first publish of each package is a manual one.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Work out which package the tag names
+        id: package
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          package="${tag%-v*}"
+          version="${tag##*-v}"
+          directory="packages/$package"
+
+          if [ ! -f "$directory/pubspec.yaml" ]; then
+            echo "Tag $tag names no package under packages/."
+            exit 1
+          fi
+
+          # The tag and the pubspec must agree, or the release would publish a
+          # version nobody reviewed.
+          declared=$(grep '^version:' "$directory/pubspec.yaml" | cut -d' ' -f2)
+          if [ "$declared" != "$version" ]; then
+            echo "Tag says $version but $directory/pubspec.yaml says $declared."
+            exit 1
+          fi
+
+          if ! grep -q "^## $version$" "$directory/CHANGELOG.md"; then
+            echo "$directory/CHANGELOG.md has no section for $version."
+            exit 1
+          fi
+
+          # A version already on pub.dev is not a failure. It happens whenever a
+          # release was published by hand and tagged afterwards — which every
+          # package's first release is — and whenever a tag is moved or pushed
+          # twice. Failing here would leave a red run that says "broken" when
+          # nothing is.
+          # Scanned across every published version rather than read off
+          # `latest`, which pub.dev sets to the newest *stable* release. With a
+          # prerelease tag and any stable release in existence, `latest` never
+          # matches, and the job would try to publish a version that is already
+          # there and fail red for no reason.
+          already=$(curl -sf "https://pub.dev/api/packages/$package" \
+            | python3 -c "import json,sys; print('yes' if '$version' in [v['version'] for v in json.load(sys.stdin)['versions']] else 'no')" \
+            2>/dev/null || echo "no")
+          if [ "$already" = "yes" ]; then
+            echo "already=true" >> "$GITHUB_OUTPUT"
+            echo "$package $version is already on pub.dev; nothing to do."
+          else
+            echo "already=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "directory=$directory" >> "$GITHUB_OUTPUT"
+          echo "package=$package" >> "$GITHUB_OUTPUT"
+
+      - uses: subosito/flutter-action@v2
+        if: steps.package.outputs.already == 'false'
+        with:
+          channel: stable
+
+      - name: Authenticate to pub.dev
+        if: steps.package.outputs.already == 'false'
+        run: |
+          set -euo pipefail
+          # dart-lang/setup-dart does this for you; subosito/flutter-action does
+          # not, and pub then falls back to opening a browser and waiting for an
+          # authorisation nobody can give. So the exchange is done here, where
+          # it is visible.
+          if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
+            echo "No OIDC token is available; the job needs id-token: write."
+            exit 1
+          fi
+
+          token=$(curl -sS \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://pub.dev" \
+            | python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])')
+          if [ -z "$token" ]; then
+            echo "The OIDC exchange returned nothing."
+            exit 1
+          fi
+          echo "::add-mask::$token"
+          echo "PUB_TOKEN=$token" >> "$GITHUB_ENV"
+
+      - name: Publish
+        if: steps.package.outputs.already == 'false'
+        working-directory: ${{ steps.package.outputs.directory }}
+        run: |
+          set -euo pipefail
+          dart pub token add https://pub.dev --env-var PUB_TOKEN
+          # This is a pub workspace, so resolution happens from the root and the
+          # sibling package must resolve too — ton_connect_ui depends on
+          # ton_connect by version, not by path.
+          flutter pub get
+          # Still from /dev/null: if the credential is somehow not accepted,
+          # fail rather than sit through the timeout.
+          flutter pub publish --force < /dev/null
+
+      - name: Report
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.package.outputs.already }}" = "true" ]; then
+            echo "### ${GITHUB_REF_NAME} was already published" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Published ${GITHUB_REF_NAME}" >> "$GITHUB_STEP_SUMMARY"
+          fi

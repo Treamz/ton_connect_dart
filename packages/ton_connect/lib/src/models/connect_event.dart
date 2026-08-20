@@ -57,6 +57,7 @@ final class ConnectEventSuccess extends ConnectEvent {
     super.id, {
     required this.items,
     required this.device,
+    required this.rawPayload,
     this.embeddedResponse,
   });
 
@@ -75,6 +76,7 @@ final class ConnectEventSuccess extends ConnectEvent {
     }
     return ConnectEventSuccess(
       id,
+      rawPayload: payload,
       items: rawItems is List<Object?>
           ? List<ConnectItemReply>.unmodifiable(
               rawItems.whereType<Map<String, Object?>>().map(
@@ -94,6 +96,13 @@ final class ConnectEventSuccess extends ConnectEvent {
 
   /// Metadata about the wallet application.
   final DeviceInfo device;
+
+  /// The payload exactly as the wallet sent it.
+  ///
+  /// Kept so a caller can persist the connection and rebuild it later through
+  /// the same parsing path, instead of maintaining a second serialisation of
+  /// every model that would drift from this one.
+  final Map<String, Object?> rawPayload;
 
   /// Raw response to an embedded request carried in the connect URL.
   ///

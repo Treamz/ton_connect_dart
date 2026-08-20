@@ -7,64 +7,9 @@ import 'package:test/test.dart';
 import 'package:ton_connect/ton_connect.dart';
 
 import 'support/fake_sse_transport.dart';
+import 'support/fake_wallet.dart';
 
 const String bridgeUrl = 'https://bridge.example.org/bridge';
-
-/// Stands in for the wallet side of a session.
-final class FakeWallet {
-  FakeWallet() : crypto = SessionCrypto();
-
-  final SessionCrypto crypto;
-
-  String get clientId => crypto.sessionId;
-
-  /// Builds a bridge envelope carrying [payload] encrypted for [dAppClientId].
-  String envelopeFor(String dAppClientId, Map<String, Object?> payload) =>
-      jsonEncode({
-        'from': clientId,
-        'message': crypto.encrypt(jsonEncode(payload), dAppClientId),
-      });
-
-  Map<String, Object?> connectSuccess({int id = 1, String? address}) => {
-    'event': 'connect',
-    'id': id,
-    'payload': {
-      'items': [
-        {
-          'name': 'ton_addr',
-          'address': address ?? '0:abc',
-          'network': '-239',
-          'publicKey': 'ff',
-          'walletStateInit': 'te6',
-        },
-      ],
-      'device': {
-        'platform': 'iphone',
-        'appName': 'tonkeeper',
-        'appVersion': '5.0.0',
-        'maxProtocolVersion': 2,
-        'features': [
-          {'name': 'SendTransaction', 'maxMessages': 4},
-        ],
-      },
-    },
-  };
-
-  Map<String, Object?> connectError({int id = 1, int code = 300}) => {
-    'event': 'connect_error',
-    'id': id,
-    'payload': {'code': code, 'message': 'User declined the connection'},
-  };
-
-  Map<String, Object?> response(String requestId, {String result = 'te6ccg'}) =>
-      {'result': result, 'id': requestId};
-
-  Map<String, Object?> disconnectEvent({int id = 2}) => {
-    'event': 'disconnect',
-    'id': id,
-    'payload': <String, Object?>{},
-  };
-}
 
 ({BridgeProvider provider, FakeSseTransport transport, InMemoryStorage storage})
 buildProvider({InMemoryStorage? storage, http.Client? httpClient}) {

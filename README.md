@@ -39,6 +39,39 @@ Both target mobile **and** Web / Telegram Mini Apps. The core carries two transp
 
 **Reconnection lives in one place, and knows which place that is.** On native platforms the gateway owns retry: exponential backoff with full jitter, replay from `last_event_id`, and a watchdog that treats silence past the keep-alive window as a dead connection — the case where a phone switches networks and the socket never notices. In the browser, `EventSource` already does all of this, so the transport declares that it self-heals and the gateway stands down rather than opening a second connection alongside it.
 
+## Quick start
+
+```dart
+final ton = TonConnect(
+  manifestUrl: 'https://example.org/tonconnect-manifest.json',
+  storage: mySecureStorage,
+);
+
+// Returning users reconnect without touching their wallet.
+if (!await ton.restoreConnection()) {
+  final wallets = await ton.availableWallets(WalletPlatform.ios);
+  final link = await ton.connect(wallets.first);
+  // Show `link` as a QR code, or open it to jump to the wallet app.
+  final connection = await ton.awaitConnection();
+  print('Connected ${connection.account.address}');
+}
+
+final boc = await ton.sendTransaction(
+  TransactionPayload.messages(
+    [
+      TransactionMessage(
+        address: 'EQ...',            // user-friendly format; the bounce flag is read from it
+        amount: BigInt.from(100000000), // nanocoins
+      ),
+    ],
+    network: NetworkId.mainnet,       // always set this
+    validUntil: DateTime.now().add(const Duration(minutes: 5)),
+  ),
+);
+```
+
+`sendTransaction` returns the BoC of the external message the wallet broadcast. That is a receipt that the wallet sent something — not proof it landed. Wait for the transaction on-chain before treating a payment as settled.
+
 ## Development
 
 Requires Dart 3.12+. The repository is a pub workspace; there is no `melos`.
@@ -63,9 +96,9 @@ dart analyze && dart test packages/ton_connect
 - [x] RPC models — `sendTransaction`, `signMessage`, `disconnect`, structured items
 - [x] Universal links and deep links
 - [x] Bridge provider — encrypted sessions, request/response matching, persistence
+- [x] Wallet registry — fetch, cache, platform filtering
+- [x] `TonConnect` facade — connect, send, sign, restore, disconnect
 - [ ] Injected provider for Telegram Mini Apps
-- [ ] Wallet registry
-- [ ] `TonConnect` facade
 - [ ] `ton_connect_ui` — wallet-picker modal
 - [ ] Example: offline merchant terminal
 

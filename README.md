@@ -37,6 +37,8 @@ Both target mobile **and** Web / Telegram Mini Apps. The core carries two transp
 
 **Protocol id rules are enforced, not assumed.** Request ids must increase strictly within a session and the wallet rejects anything that does not, so the counter is persisted — restarting it at 1 after an app relaunch would get every request refused until it caught up. Wallet event ids are checked the same way in the other direction, which is what stops a bridge replaying from `last_event_id` from re-applying a stale disconnect to a live session.
 
+**Both transports, one session interface.** The encrypted HTTP bridge and the injected `window.<wallet>.tonconnect` binding have almost nothing in common — one is a relay between devices, the other a direct call inside a page — but once a wallet is connected a dApp does the same things through either. They meet at `TonConnectSession`, so `sendTransaction` does not care which one carries it. Inside a Telegram Mini App or a wallet's browser, `injectedWallets` is non-empty and `connectInjected` skips the QR code entirely; `restoreConnection` prefers an injected wallet for the same reason.
+
 **Reconnection lives in one place, and knows which place that is.** On native platforms the gateway owns retry: exponential backoff with full jitter, replay from `last_event_id`, and a watchdog that treats silence past the keep-alive window as a dead connection — the case where a phone switches networks and the socket never notices. In the browser, `EventSource` already does all of this, so the transport declares that it self-heals and the gateway stands down rather than opening a second connection alongside it.
 
 ## Quick start
@@ -49,11 +51,17 @@ final ton = TonConnect(
 
 // Returning users reconnect without touching their wallet.
 if (!await ton.restoreConnection()) {
-  final wallets = await ton.availableWallets(WalletPlatform.ios);
-  final link = await ton.connect(wallets.first);
-  // Show `link` as a QR code, or open it to jump to the wallet app.
-  final connection = await ton.awaitConnection();
-  print('Connected ${connection.account.address}');
+  if (ton.injectedWallets.isNotEmpty) {
+    // Inside a Telegram Mini App or a wallet browser, the wallet is already
+    // here — sending the user out to scan a QR code would be absurd.
+    await ton.connectInjected(ton.injectedWallets.first);
+  } else {
+    final wallets = await ton.availableWallets(WalletPlatform.ios);
+    final link = await ton.connect(wallets.first);
+    // Show `link` as a QR code, or open it to jump to the wallet app.
+    await ton.awaitConnection();
+  }
+  print('Connected ${ton.connection!.account.address}');
 }
 
 final boc = await ton.sendTransaction(
@@ -98,7 +106,7 @@ dart analyze && dart test packages/ton_connect
 - [x] Bridge provider — encrypted sessions, request/response matching, persistence
 - [x] Wallet registry — fetch, cache, platform filtering
 - [x] `TonConnect` facade — connect, send, sign, restore, disconnect
-- [ ] Injected provider for Telegram Mini Apps
+- [x] Injected provider for Telegram Mini Apps and wallet browsers
 - [ ] `ton_connect_ui` — wallet-picker modal
 - [ ] Example: offline merchant terminal
 

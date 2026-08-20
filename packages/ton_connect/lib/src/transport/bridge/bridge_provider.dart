@@ -10,6 +10,7 @@ import '../../models/rpc.dart';
 import '../../models/ton_connect_error.dart';
 import '../../storage/storage.dart';
 import '../connect_link.dart';
+import '../ton_connect_session.dart';
 import 'bridge_gateway.dart';
 import 'bridge_message.dart';
 import 'bridge_session.dart';
@@ -24,7 +25,7 @@ const String bridgeSessionStorageKey = 'ton_connect:bridge_session';
 /// dApp: it encrypts and decrypts under the session key, matches responses to
 /// the requests that are waiting on them, enforces the id rules the protocol
 /// requires, and persists enough state to resume after a restart.
-final class BridgeProvider {
+final class BridgeProvider implements TonConnectSession {
   /// Creates a provider.
   ///
   /// The storage holds the session across restarts; without a durable
@@ -45,6 +46,7 @@ final class BridgeProvider {
   Completer<ConnectEventSuccess>? _connecting;
 
   /// Wallet-initiated events, currently only [DisconnectEvent].
+  @override
   Stream<WalletEvent> get events => _events.stream;
 
   /// The current session, or `null` when there is none.
@@ -274,6 +276,7 @@ final class BridgeProvider {
   /// Throws [WalletNotConnectedError] when no wallet is connected, and
   /// [TonConnectBridgeError] when the bridge refuses the message. The returned
   /// future resolves when the wallet answers, which is after the user acts.
+  @override
   Future<WalletResponse> sendRequest(
     AppRequest request, {
     Duration ttl = const Duration(seconds: 300),
@@ -330,6 +333,7 @@ final class BridgeProvider {
   /// Tells the wallet, then forgets the session either way: a disconnect the
   /// wallet never hears about still has to end locally, or the user is stuck
   /// connected to a wallet the app no longer talks to.
+  @override
   Future<void> disconnect() async {
     if (!isConnected) {
       await _forgetSession();
@@ -401,6 +405,7 @@ final class BridgeProvider {
   ///
   /// Does not disconnect the wallet — the session stays valid and can be
   /// restored later. Call [disconnect] to actually end it.
+  @override
   Future<void> close() async {
     await _teardown();
     await _events.close();

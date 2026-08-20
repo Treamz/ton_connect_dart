@@ -21,4 +21,8 @@ export 'src/transport/bridge/sse_event.dart';
 export 'src/transport/bridge/sse_transport.dart';
 export 'src/transport/bridge/sse_transport_factory.dart';
 export 'src/transport/connect_link.dart';
+export 'src/transport/injected/injected_bridge.dart';
+export 'src/transport/injected/injected_discovery.dart';
+export 'src/transport/injected/injected_provider.dart';
+export 'src/transport/ton_connect_session.dart';
 export 'src/wallets/wallets_list_manager.dart';

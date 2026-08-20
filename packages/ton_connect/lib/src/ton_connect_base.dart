@@ -15,6 +15,10 @@ import 'models/wallet_app.dart';
 import 'storage/storage.dart';
 import 'transport/bridge/bridge_provider.dart';
 import 'transport/bridge/sse_transport.dart';
+import 'transport/injected/injected_bridge.dart';
+import 'transport/injected/injected_discovery.dart';
+import 'transport/injected/injected_provider.dart';
+import 'transport/ton_connect_session.dart';
 import 'wallets/wallets_list_manager.dart';
 
 /// A live connection to a wallet.
@@ -88,6 +92,9 @@ final class TonConnect {
   late final BridgeProvider _provider;
   late final StreamSubscription<WalletEvent> _eventSubscription;
 
+  InjectedProvider? _injected;
+  StreamSubscription<WalletEvent>? _injectedSubscription;
+
   final StreamController<WalletEvent> _events =
       StreamController<WalletEvent>.broadcast();
 
@@ -104,6 +111,17 @@ final class TonConnect {
 
   /// The wallets registry.
   WalletsListManager get wallets => _walletsList;
+
+  /// The `window` keys of wallets that injected themselves into this page.
+  ///
+  /// Always empty off the web. When this is not empty the dApp is running
+  /// inside a wallet's browser or a Telegram Mini App, and should offer
+  /// [connectInjected] instead of a QR code — the wallet is already here.
+  List<String> get injectedWallets => injectedWalletKeys();
+
+  /// The session currently in use, whichever transport carries it.
+  TonConnectSession? get _session =>
+      _injected ?? (_provider.isConnected ? _provider : null);
 
   /// Wallets that can be connected on [platform].
   Future<List<WalletApp>> availableWallets(WalletPlatform platform) =>
@@ -133,19 +151,47 @@ final class TonConnect {
     }
 
     return _provider.connect(
-      request: ConnectRequest(
-        manifestUrl: manifestUrl,
-        items: [
-          const TonAddressItem(),
-          if (proofPayload != null) TonProofItem(proofPayload),
-        ],
-      ),
+      request: _requestFor(proofPayload),
       bridgeUrl: bridge.url,
       linkBase: linkBase,
       returnStrategy: returnStrategy,
       traceId: traceId,
     );
   }
+
+  /// Connects to the wallet injected under [key], without a bridge or a QR.
+  ///
+  /// Call this only from an explicit user action. There is no link to show and
+  /// no waiting: the wallet is in the same page, so this returns the finished
+  /// connection.
+  ///
+  /// Throws [TonConnectBridgeError] when no wallet is injected under [key], and
+  /// [UserDeclinedError] when the user refuses.
+  Future<WalletConnection> connectInjected(String key) async {
+    final bridge = openInjected(key);
+    if (bridge == null) {
+      throw TonConnectBridgeError('No wallet is injected under "$key".');
+    }
+    return _adopt(await _useInjected(bridge).connect(_requestFor(null)));
+  }
+
+  InjectedProvider _useInjected(InjectedBridge bridge) {
+    final provider = InjectedProvider(bridge);
+    _injected = provider;
+    _injectedSubscription = provider.events.listen(
+      _onWalletEvent,
+      onError: _events.addError,
+    );
+    return provider;
+  }
+
+  ConnectRequest _requestFor(String? proofPayload) => ConnectRequest(
+    manifestUrl: manifestUrl,
+    items: [
+      const TonAddressItem(),
+      if (proofPayload != null) TonProofItem(proofPayload),
+    ],
+  );
 
   /// Completes when the wallet answers the pending connect.
   ///
@@ -160,6 +206,18 @@ final class TonConnect {
   ///
   /// Returns `false` when there is nothing to restore.
   Future<bool> restoreConnection() async {
+    for (final key in injectedWalletKeys()) {
+      final bridge = openInjected(key);
+      if (bridge == null) continue;
+      final restored = await _useInjected(bridge).restoreConnection();
+      if (restored != null) {
+        _adopt(restored);
+        return true;
+      }
+      // This wallet does not know the dApp; drop it and try the next.
+      await _releaseInjected();
+    }
+
     if (!await _provider.restoreConnection()) return false;
 
     final restored = await _readStoredConnection();
@@ -225,7 +283,7 @@ final class TonConnect {
     );
 
     return _resultOf(
-      await _provider.sendRequest(
+      await _requireSession().sendRequest(
         SendTransactionRequest(payload),
         ttl: ttl,
         traceId: traceId,
@@ -263,7 +321,7 @@ final class TonConnect {
     );
 
     return _resultOf(
-      await _provider.sendRequest(
+      await _requireSession().sendRequest(
         SignMessageRequest(payload),
         ttl: ttl,
         traceId: traceId,
@@ -273,9 +331,23 @@ final class TonConnect {
 
   /// Ends the session.
   Future<void> disconnect() async {
-    await _provider.disconnect();
+    await _session?.disconnect();
+    await _releaseInjected();
     _connection = null;
     await _storage.delete(_connectionStorageKey);
+  }
+
+  Future<void> _releaseInjected() async {
+    await _injectedSubscription?.cancel();
+    _injectedSubscription = null;
+    await _injected?.close();
+    _injected = null;
+  }
+
+  TonConnectSession _requireSession() {
+    final session = _session;
+    if (session == null) throw const WalletNotConnectedError();
+    return session;
   }
 
   /// Refuses a payload the connected wallet would not accept.
@@ -383,6 +455,7 @@ final class TonConnect {
   /// Releases resources. Does not disconnect the wallet.
   Future<void> close() async {
     await _eventSubscription.cancel();
+    await _releaseInjected();
     await _provider.close();
     await _events.close();
     _walletsList.close();

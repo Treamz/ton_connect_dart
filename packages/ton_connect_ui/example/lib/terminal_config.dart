@@ -11,12 +11,25 @@ const String terminalManifestUrl =
 
 /// Where takings are collected.
 ///
-/// Replace with the merchant's own address. Use the **non-bounceable** friendly
-/// form for a wallet contract: the bounce flag is read out of the address
-/// itself, and a bounceable address would return the payment if the receiving
-/// wallet is not deployed yet.
+/// **This is a placeholder and money sent to it is destroyed.** It is the zero
+/// address: no such account exists, and the non-bounceable form means nothing
+/// comes back. Replace it with the merchant's own address before charging
+/// anything. [merchantAddressIsPlaceholder] keeps the terminal from taking a
+/// payment until you do.
+///
+/// Use the **non-bounceable** friendly form for a wallet contract: the bounce
+/// flag is read out of the address itself, and a bounceable address would
+/// return the payment if the receiving wallet is not deployed yet.
 const String merchantAddress =
     'UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ';
+
+/// Whether [merchantAddress] is still the burn-address placeholder.
+///
+/// A comment saying "replace this" is not a safeguard. An example that ships
+/// pointed at the zero address on mainnet must not be one tap away from
+/// destroying real money, so the terminal checks rather than trusts.
+bool get merchantAddressIsPlaceholder =>
+    merchantAddress == 'UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ';
 
 /// The network this terminal takes payments on.
 ///

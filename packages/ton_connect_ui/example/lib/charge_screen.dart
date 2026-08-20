@@ -50,6 +50,14 @@ class _ChargeScreenState extends State<ChargeScreen> {
   }
 
   Future<void> _charge() async {
+    if (merchantAddressIsPlaceholder) {
+      _say(
+        'This terminal still points at the placeholder address, which burns '
+        'anything sent to it. Set merchantAddress before charging.',
+      );
+      return;
+    }
+
     final payload = _payload();
     setState(() => _charging = true);
 

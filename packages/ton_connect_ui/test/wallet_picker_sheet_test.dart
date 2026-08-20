@@ -71,6 +71,19 @@ Future<void> settle(WidgetTester tester) async {
   }
 }
 
+/// Pumps frames while letting real asynchronous work progress.
+///
+/// Superseding a connect tears the old session down, and that path closes a
+/// broadcast stream — which never completes under the fake async a
+/// `testWidgets` body runs in. `runAsync` steps out to the real event loop so
+/// the teardown can finish.
+Future<void> settleReal(WidgetTester tester) async {
+  for (var i = 0; i < 8; i++) {
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    await tester.pump(const Duration(milliseconds: 50));
+  }
+}
+
 /// Closes [ton] and drains the frames its teardown schedules.
 ///
 /// Two constraints meet here. The bridge gateway keeps a heartbeat watchdog
@@ -272,6 +285,34 @@ void main() {
         findsOneWidget,
       );
       expect(tester.takeException(), isNull);
+
+      await closeClient(tester, ctx.ton);
+    });
+
+    testWidgets('a superseded attempt does not report over the current one', (
+      tester,
+    ) async {
+      // Pick a wallet, go back, pick another. The library cancels the first
+      // connect — correctly, since a session is one pair of keys — and that
+      // cancellation must not paint an error over the wallet just chosen.
+      final ctx = buildClient(
+        registry: [entryNamed('Tonkeeper'), entryNamed('Binance Wallet')],
+      );
+      await pumpSheet(tester, ctx.ton);
+      await settle(tester);
+
+      await tester.tap(find.text('Tonkeeper'));
+      await settle(tester);
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await settle(tester);
+      await tester.tap(find.text('Binance Wallet'));
+      await settleReal(tester);
+
+      // A second session was opened, and the abandoned first one left no
+      // error behind.
+      expect(ctx.transport.connectionCount, 2);
+      expect(find.text('Try again'), findsNothing);
+      expect(find.textContaining('cancelled'), findsNothing);
 
       await closeClient(tester, ctx.ton);
     });

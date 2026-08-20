@@ -80,6 +80,18 @@ class _WalletPickerSheetState extends State<WalletPickerSheet> {
   String? _link;
   Object? _error;
 
+  /// Identifies the connect attempt currently on screen.
+  ///
+  /// Picking a wallet supersedes any attempt still in flight, and the library
+  /// cancels the old one — correctly, since a session is one pair of keys. But
+  /// the cancelled attempt is still sitting in its own `await` inside this
+  /// State, and without this counter its failure lands in `setState` and paints
+  /// "the connect was cancelled" over the wallet the user just chose.
+  int _attempt = 0;
+
+  /// Whether [attempt] is still the one the user is waiting on.
+  bool _isCurrent(int attempt) => mounted && attempt == _attempt;
+
   @override
   void initState() {
     super.initState();
@@ -88,19 +100,21 @@ class _WalletPickerSheetState extends State<WalletPickerSheet> {
   }
 
   Future<void> _connectInjected(String key) async {
+    final attempt = ++_attempt;
     setState(() {
       _error = null;
       _link = null;
     });
     try {
       final connection = await widget.ton.connectInjected(key);
-      if (mounted) Navigator.of(context).pop(connection);
+      if (_isCurrent(attempt)) Navigator.of(context).pop(connection);
     } on Object catch (error) {
-      if (mounted) setState(() => _error = error);
+      if (_isCurrent(attempt)) setState(() => _error = error);
     }
   }
 
   Future<void> _connect(WalletApp wallet) async {
+    final attempt = ++_attempt;
     setState(() {
       _pending = wallet;
       _error = null;
@@ -113,16 +127,20 @@ class _WalletPickerSheetState extends State<WalletPickerSheet> {
         wallet,
         proofPayload: widget.proofPayload,
         embeddedRequest: widget.embeddedRequest,
+        // This app is about to open the link itself, so prefer the wallet's
+        // own scheme where it has one: a universal link lands in the browser
+        // once the system has stopped honouring the domain association.
+        preferDeepLink: prefersDeepLink,
         // Bring the user back to this app once they have approved, rather than
         // leaving them looking at their wallet wondering what happened.
         returnStrategy: ReturnStrategy.back,
       );
     } on Object catch (error) {
-      if (mounted) setState(() => _error = error);
+      if (_isCurrent(attempt)) setState(() => _error = error);
       return;
     }
 
-    if (!mounted) return;
+    if (!_isCurrent(attempt)) return;
     setState(() => _link = link);
 
     // On a phone the wallet is another app here, so jump straight to it. On
@@ -134,9 +152,9 @@ class _WalletPickerSheetState extends State<WalletPickerSheet> {
 
     try {
       final connection = await widget.ton.awaitConnection();
-      if (mounted) Navigator.of(context).pop(connection);
+      if (_isCurrent(attempt)) Navigator.of(context).pop(connection);
     } on Object catch (error) {
-      if (mounted) setState(() => _error = error);
+      if (_isCurrent(attempt)) setState(() => _error = error);
     }
   }
 
@@ -150,6 +168,9 @@ class _WalletPickerSheetState extends State<WalletPickerSheet> {
   }
 
   void _back() {
+    // Abandon the attempt as well as its screen, so its eventual failure does
+    // not surface on top of whatever the user does next.
+    _attempt++;
     setState(() {
       _pending = null;
       _link = null;

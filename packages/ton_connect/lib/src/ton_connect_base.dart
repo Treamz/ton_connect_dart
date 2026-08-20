@@ -150,6 +150,10 @@ final class TonConnect {
   /// attaching one never costs a connect — it just does not save the step. The
   /// answer, when there is one, arrives as `ConnectEventSuccess.embeddedResponse`.
   ///
+  /// Set [preferDeepLink] when this app will open the link itself on this
+  /// device, rather than showing it as a QR code. It picks the wallet's custom
+  /// scheme where there is one, which lands in the app instead of the browser.
+  ///
   /// The bridge subscription is live before this returns. Await
   /// [awaitConnection] for the wallet's answer.
   Future<String> connect(
@@ -158,9 +162,10 @@ final class TonConnect {
     ReturnStrategy? returnStrategy,
     String? traceId,
     String? embeddedRequest,
+    bool preferDeepLink = false,
   }) async {
     final bridge = wallet.sseBridge;
-    final linkBase = wallet.linkBase;
+    final linkBase = preferDeepLink ? wallet.deepLinkBase : wallet.linkBase;
     if (bridge == null || linkBase == null) {
       throw TonConnectBridgeError(
         '${wallet.name} cannot be reached over the HTTP bridge: its registry '

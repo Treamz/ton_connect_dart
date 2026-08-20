@@ -2,7 +2,7 @@ name: ton_connect
 description: >-
   Pure Dart implementation of the TON Connect 2 protocol: encrypted HTTP bridge
   sessions, the injected JS bridge, the wallet registry and universal links.
-version: 0.1.0-dev.1
+version: 0.1.0-dev.2
 repository: https://github.com/Treamz/ton_connect_dart
 issue_tracker: https://github.com/Treamz/ton_connect_dart/issues
 

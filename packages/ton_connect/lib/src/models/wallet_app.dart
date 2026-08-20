@@ -208,8 +208,23 @@ final class WalletApp {
     return null;
   }
 
-  /// The best link base for a bridge connection, or `null` when there is none.
+  /// The best link base for a connection the user reaches from elsewhere.
+  ///
+  /// Prefers the universal link, because an HTTPS address degrades to a web
+  /// page when the wallet is not installed, while a custom scheme dead-ends.
+  /// That is the right trade for a QR code, which is scanned by a device this
+  /// app knows nothing about.
   String? get linkBase => universalUrl ?? deepLink;
+
+  /// The best link base for opening the wallet on this same device.
+  ///
+  /// Reverses the preference: a custom scheme goes straight to the installed
+  /// app, while a universal link only reaches it if the system still honours
+  /// the association — which it stops doing once the user has opened that
+  /// domain in a browser, after which every attempt silently lands there
+  /// instead. Falls back to the universal link, since only some wallets
+  /// publish a scheme.
+  String? get deepLinkBase => deepLink ?? universalUrl;
 
   /// Whether this wallet can be connected over the HTTP bridge.
   bool get supportsBridge => sseBridge != null && linkBase != null;

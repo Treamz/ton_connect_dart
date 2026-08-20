@@ -71,6 +71,7 @@ final class BridgeProvider implements TonConnectSession {
     required String linkBase,
     ReturnStrategy? returnStrategy,
     String? traceId,
+    String? embeddedRequest,
   }) async {
     if (isConnected) throw const WalletAlreadyConnectedError();
 
@@ -88,6 +89,7 @@ final class BridgeProvider implements TonConnectSession {
       request: request,
       returnStrategy: returnStrategy,
       traceId: traceId,
+      embeddedRequest: embeddedRequest,
     );
   }
 

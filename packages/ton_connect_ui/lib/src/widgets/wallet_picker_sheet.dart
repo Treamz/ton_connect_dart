@@ -22,13 +22,24 @@ Future<WalletConnection?> showWalletPicker({
   required BuildContext context,
   required TonConnect ton,
   String? proofPayload,
+  String? embeddedRequest,
   bool isScrollControlled = true,
 }) {
   return showModalBottomSheet<WalletConnection>(
     context: context,
     isScrollControlled: isScrollControlled,
-    builder: (context) =>
-        WalletPickerSheet(ton: ton, proofPayload: proofPayload),
+    // Without both of these the sheet runs the full height of the screen and
+    // its header disappears under the notch, so the user cannot see which
+    // wallet they picked or find the way back.
+    useSafeArea: true,
+    constraints: BoxConstraints(
+      maxHeight: MediaQuery.of(context).size.height * 0.85,
+    ),
+    builder: (context) => WalletPickerSheet(
+      ton: ton,
+      proofPayload: proofPayload,
+      embeddedRequest: embeddedRequest,
+    ),
   );
 }
 
@@ -38,13 +49,24 @@ Future<WalletConnection?> showWalletPicker({
 /// other than a modal sheet.
 class WalletPickerSheet extends StatefulWidget {
   /// Creates a picker driving [ton].
-  const WalletPickerSheet({required this.ton, super.key, this.proofPayload});
+  const WalletPickerSheet({
+    required this.ton,
+    super.key,
+    this.proofPayload,
+    this.embeddedRequest,
+  });
 
   /// The client to connect.
   final TonConnect ton;
 
   /// Challenge for a `ton_proof` item, when the dApp authenticates the user.
   final String? proofPayload;
+
+  /// A request to ride along in the connect link, built with `EmbeddedRequest`.
+  ///
+  /// Lets a wallet that supports it approve the connection and the request in
+  /// one pass. The answer comes back on `WalletConnection.embeddedResponse`.
+  final String? embeddedRequest;
 
   @override
   State<WalletPickerSheet> createState() => _WalletPickerSheetState();
@@ -90,6 +112,7 @@ class _WalletPickerSheetState extends State<WalletPickerSheet> {
       link = await widget.ton.connect(
         wallet,
         proofPayload: widget.proofPayload,
+        embeddedRequest: widget.embeddedRequest,
         // Bring the user back to this app once they have approved, rather than
         // leaving them looking at their wallet wondering what happened.
         returnStrategy: ReturnStrategy.back,

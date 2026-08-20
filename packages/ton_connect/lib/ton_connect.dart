@@ -21,6 +21,7 @@ export 'src/transport/bridge/sse_event.dart';
 export 'src/transport/bridge/sse_transport.dart';
 export 'src/transport/bridge/sse_transport_factory.dart';
 export 'src/transport/connect_link.dart';
+export 'src/transport/embedded_request.dart';
 export 'src/transport/injected/injected_bridge.dart';
 export 'src/transport/injected/injected_discovery.dart';
 export 'src/transport/injected/injected_provider.dart';

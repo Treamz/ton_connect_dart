@@ -1,0 +1,27 @@
+name: merchant_terminal
+description: >-
+  A point-of-sale terminal for TON: the cashier enters an amount, the customer
+  scans once, and the wallet approves connection and payment together.
+publish_to: none
+version: 1.0.0
+
+environment:
+  sdk: ^3.12.0
+  flutter: ">=3.35.0"
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  ton_connect_ui: ^0.1.0-dev.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^6.0.0
+
+flutter:
+  # Without this the Material icon font is not bundled and every icon in the
+  # app — and in the wallet picker — renders as a missing-glyph box.
+  uses-material-design: true

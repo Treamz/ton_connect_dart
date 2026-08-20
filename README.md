@@ -37,6 +37,8 @@ Both target mobile **and** Web / Telegram Mini Apps. The core carries two transp
 
 **Protocol id rules are enforced, not assumed.** Request ids must increase strictly within a session and the wallet rejects anything that does not, so the counter is persisted — restarting it at 1 after an app relaunch would get every request refused until it caught up. Wallet event ids are checked the same way in the other direction, which is what stops a bridge replaying from `last_event_id` from re-applying a stale disconnect to a live session.
 
+**One scan, not two.** `EmbeddedRequest` folds a payment into the connect link, so a wallet that supports it asks the customer once instead of twice. At a shop counter that is the difference between a queue moving and a queue waiting. Wallets without the feature ignore the parameter, so attaching one never costs a connect — the dApp just falls back to sending over the bridge.
+
 **Both transports, one session interface.** The encrypted HTTP bridge and the injected `window.<wallet>.tonconnect` binding have almost nothing in common — one is a relay between devices, the other a direct call inside a page — but once a wallet is connected a dApp does the same things through either. They meet at `TonConnectSession`, so `sendTransaction` does not care which one carries it. Inside a Telegram Mini App or a wallet's browser, `injectedWallets` is non-empty and `connectInjected` skips the QR code entirely; `restoreConnection` prefers an injected wallet for the same reason.
 
 **Reconnection lives in one place, and knows which place that is.** On native platforms the gateway owns retry: exponential backoff with full jitter, replay from `last_event_id`, and a watchdog that treats silence past the keep-alive window as a dead connection — the case where a phone switches networks and the socket never notices. In the browser, `EventSource` already does all of this, so the transport declares that it self-heals and the gateway stands down rather than opening a second connection alongside it.
@@ -108,7 +110,8 @@ dart analyze && dart test packages/ton_connect
 - [x] `TonConnect` facade — connect, send, sign, restore, disconnect
 - [x] Injected provider for Telegram Mini Apps and wallet browsers
 - [x] `ton_connect_ui` — wallet-picker modal, QR, deep links
-- [ ] Example: offline merchant terminal
+- [x] Example: merchant terminal
+- [x] Embedded requests — connect and pay in one scan
 
 ## License
 

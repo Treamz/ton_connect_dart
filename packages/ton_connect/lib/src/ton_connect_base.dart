@@ -15,6 +15,7 @@ import 'models/wallet_app.dart';
 import 'storage/storage.dart';
 import 'transport/bridge/bridge_provider.dart';
 import 'transport/bridge/sse_transport.dart';
+import 'transport/embedded_request.dart';
 import 'transport/injected/injected_bridge.dart';
 import 'transport/injected/injected_discovery.dart';
 import 'transport/injected/injected_provider.dart';
@@ -29,6 +30,7 @@ final class WalletConnection {
     required this.account,
     required this.device,
     this.proof,
+    this.embeddedResponse,
   });
 
   /// The connected account.
@@ -42,6 +44,15 @@ final class WalletConnection {
 
   /// The address proof, when one was requested and returned.
   final TonProof? proof;
+
+  /// The wallet's answer to a request embedded in the connect link.
+  ///
+  /// Present only when the connect carried an `e` parameter and the wallet
+  /// advertises `EmbeddedRequest`. Its shape is a `WalletResponse`: a `result`
+  /// on success, an `error` when the wallet refused. Null means the wallet
+  /// ignored the embedded request, and the dApp should send it over the bridge
+  /// instead.
+  final Map<String, Object?>? embeddedResponse;
 
   @override
   String toString() =>
@@ -133,6 +144,12 @@ final class TonConnect {
   /// nonce with an expiry: a proof is only evidence of key ownership if it
   /// cannot be replayed, and one verified on the client alone proves nothing.
   ///
+  /// Pass [embeddedRequest], built with [EmbeddedRequest], to ride a payment
+  /// along in the same link, so the user approves connection and transaction in
+  /// one pass. Wallets without the `EmbeddedRequest` feature ignore it, so
+  /// attaching one never costs a connect — it just does not save the step. The
+  /// answer, when there is one, arrives as `ConnectEventSuccess.embeddedResponse`.
+  ///
   /// The bridge subscription is live before this returns. Await
   /// [awaitConnection] for the wallet's answer.
   Future<String> connect(
@@ -140,6 +157,7 @@ final class TonConnect {
     String? proofPayload,
     ReturnStrategy? returnStrategy,
     String? traceId,
+    String? embeddedRequest,
   }) async {
     final bridge = wallet.sseBridge;
     final linkBase = wallet.linkBase;
@@ -156,6 +174,7 @@ final class TonConnect {
       linkBase: linkBase,
       returnStrategy: returnStrategy,
       traceId: traceId,
+      embeddedRequest: embeddedRequest,
     );
   }
 
@@ -243,6 +262,7 @@ final class TonConnect {
       account: account,
       device: event.device,
       proof: event.tonProof,
+      embeddedResponse: event.embeddedResponse,
     );
     _connection = connection;
     // Storing the wallet's own payload means restoring runs the same parser,

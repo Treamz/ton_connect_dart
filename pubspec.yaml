@@ -1,0 +1,12 @@
+name: flutter_ton_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.12.0
+
+workspace:
+  - packages/ton_connect
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.26.0

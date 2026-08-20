@@ -1,3 +1,7 @@
+## 0.1.0-dev.3
+
+- Added an example, and documentation for the last few undocumented symbols.
+
 ## 0.1.0-dev.2
 
 - Opening a wallet on this device now prefers its custom scheme over the

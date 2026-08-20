@@ -26,6 +26,9 @@ abstract interface class TonConnectStorage {
 /// stored here is lost on restart, so a real app cannot restore its connection
 /// and the user reconnects every launch.
 final class InMemoryStorage implements TonConnectStorage {
+  /// Creates an empty store.
+  InMemoryStorage();
+
   final Map<String, String> _values = {};
 
   @override

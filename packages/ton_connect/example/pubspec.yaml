@@ -1,0 +1,15 @@
+name: ton_connect_example
+description: A console walkthrough of connecting a TON wallet and asking it to pay.
+publish_to: none
+version: 1.0.0
+
+environment:
+  sdk: ^3.12.0
+
+resolution: workspace
+
+dependencies:
+  ton_connect: ^0.1.0-dev.3
+
+dev_dependencies:
+  lints: ^6.0.0

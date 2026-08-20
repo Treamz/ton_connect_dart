@@ -2,7 +2,7 @@ name: ton_connect_ui
 description: >-
   Flutter UI for TON Connect: a wallet-picker modal backed by the public wallet
   registry, QR and deep-link connect flows, and ready-made connect widgets.
-version: 0.1.0-dev.2
+version: 0.1.0-dev.3
 repository: https://github.com/Treamz/ton_connect_dart
 issue_tracker: https://github.com/Treamz/ton_connect_dart/issues
 
@@ -22,7 +22,7 @@ dependencies:
   flutter:
     sdk: flutter
   qr: ^4.0.0
-  ton_connect: ^0.1.0-dev.2
+  ton_connect: ^0.1.0-dev.3
   url_launcher: ^6.3.2
 
 dev_dependencies:

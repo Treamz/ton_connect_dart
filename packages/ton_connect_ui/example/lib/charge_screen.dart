@@ -18,7 +18,10 @@ class ChargeScreen extends StatefulWidget {
 }
 
 class _ChargeScreenState extends State<ChargeScreen> {
-  TypedAmount _amount = const TypedAmount(Tender.usdt);
+  /// The tenders this terminal can charge on its configured network.
+  late final List<Tender> _tenders = tendersFor(terminalNetwork);
+
+  late TypedAmount _amount = TypedAmount(_tenders.last);
   bool _charging = false;
 
   /// Builds the payment the customer is about to approve.
@@ -38,7 +41,8 @@ class _ChargeScreenState extends State<ChargeScreen> {
       Tender.usdt => TransactionPayload.items(
         [
           JettonTransferItem(
-            master: usdtMaster,
+            // Non-null because USDT is only offered where a master exists.
+            master: usdtMasterFor(terminalNetwork)!,
             destination: merchantAddress,
             amount: _amount.units,
           ),
@@ -139,15 +143,30 @@ class _ChargeScreenState extends State<ChargeScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            SegmentedButton<Tender>(
-              segments: [
-                for (final tender in Tender.values)
-                  ButtonSegment(value: tender, label: Text(tender.label)),
-              ],
-              selected: {_amount.tender},
-              onSelectionChanged: (selected) =>
-                  setState(() => _amount = _amount.withTender(selected.first)),
-            ),
+            if (_tenders.length > 1)
+              SegmentedButton<Tender>(
+                segments: [
+                  for (final tender in _tenders)
+                    ButtonSegment(value: tender, label: Text(tender.label)),
+                ],
+                selected: {_amount.tender},
+                onSelectionChanged: (selected) => setState(
+                  () => _amount = _amount.withTender(selected.first),
+                ),
+              )
+            else
+              Text(
+                _amount.tender.label,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            if (!terminalNetwork.isMainnet)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'Testnet — these are not real funds',
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+              ),
             const Spacer(),
             _Keypad(
               onDigit: (d) => setState(() => _amount = _amount.append(d)),

@@ -15,9 +15,13 @@ to it is destroyed, and because the address is non-bounceable, nothing comes
 back. `terminalNetwork` is mainnet, so those would be real funds.
 
 The terminal refuses to take a payment until you replace it. Set your own
-address in `lib/terminal_config.dart`, in the non-bounceable friendly form.
-For a first live test, switch `terminalNetwork` to `NetworkId.testnet` and use
-testnet coins.
+address in `lib/terminal_config.dart`, in the non-bounceable friendly form —
+the one starting `UQ`, not `EQ`.
+
+`terminalNetwork` ships as **testnet**, so a first run costs nothing. Note that
+USDT disappears from the keypad there: a jetton master is a contract at a fixed
+address, and USDT's exists only on mainnet, so the terminal drops the tender
+rather than offering a transfer that cannot work. Testnet runs charge in TON.
 
 ## What a real terminal still needs
 

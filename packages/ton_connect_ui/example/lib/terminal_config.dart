@@ -36,7 +36,10 @@ bool get merchantAddressIsPlaceholder =>
 /// Always sent explicitly. Left unset, the wallet would use whichever network
 /// it happens to be on, and a testnet payment would look exactly like a real
 /// one on this screen.
-const NetworkId terminalNetwork = NetworkId.mainnet;
+///
+/// Set to testnet so a first live run costs nothing. Switch to
+/// [NetworkId.mainnet] only once the flow has been proven end to end.
+const NetworkId terminalNetwork = NetworkId.testnet;
 
 /// How long the customer has to approve before the request expires.
 ///
@@ -66,4 +69,24 @@ enum Tender {
 }
 
 /// The USDT jetton master contract on mainnet.
-const String usdtMaster = 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs';
+///
+/// A jetton master is a contract at a fixed address, and this one exists only
+/// on mainnet. Pointing a testnet transfer at it addresses a contract that is
+/// not there, so [usdtMasterFor] returns nothing on other networks and the
+/// terminal drops USDT from the keypad rather than offering a transfer that
+/// cannot work.
+const String usdtMasterMainnet =
+    'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs';
+
+/// The USDT master for [network], or `null` where none is known.
+String? usdtMasterFor(NetworkId network) =>
+    network.isMainnet ? usdtMasterMainnet : null;
+
+/// The tenders this terminal can actually charge on [network].
+///
+/// TON is native and works everywhere. A jetton needs its master contract to
+/// exist on the network being used.
+List<Tender> tendersFor(NetworkId network) => [
+  Tender.ton,
+  if (usdtMasterFor(network) != null) Tender.usdt,
+];

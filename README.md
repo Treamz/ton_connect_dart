@@ -35,6 +35,8 @@ Both target mobile **and** Web / Telegram Mini Apps. The core carries two transp
 
 **Transport parsing is separable from I/O.** The SSE framing logic is a pure `StreamTransformer` over lines, so the bridge's edge cases — multi-line `data`, `id` carry-forward, truncated trailing events, heartbeat frames — are tested without a server.
 
+**Protocol id rules are enforced, not assumed.** Request ids must increase strictly within a session and the wallet rejects anything that does not, so the counter is persisted — restarting it at 1 after an app relaunch would get every request refused until it caught up. Wallet event ids are checked the same way in the other direction, which is what stops a bridge replaying from `last_event_id` from re-applying a stale disconnect to a live session.
+
 **Reconnection lives in one place, and knows which place that is.** On native platforms the gateway owns retry: exponential backoff with full jitter, replay from `last_event_id`, and a watchdog that treats silence past the keep-alive window as a dead connection — the case where a phone switches networks and the socket never notices. In the browser, `EventSource` already does all of this, so the transport declares that it self-heals and the gateway stands down rather than opening a second connection alongside it.
 
 ## Development
@@ -58,10 +60,12 @@ dart analyze && dart test packages/ton_connect
 - [x] SSE framing
 - [x] SSE connection — `dart:io` and browser `EventSource`
 - [x] `BridgeGateway` — reconnect with `last_event_id`, heartbeat handling
-- [ ] Bridge and injected providers
+- [x] RPC models — `sendTransaction`, `signMessage`, `disconnect`, structured items
+- [x] Universal links and deep links
+- [x] Bridge provider — encrypted sessions, request/response matching, persistence
+- [ ] Injected provider for Telegram Mini Apps
 - [ ] Wallet registry
-- [ ] `TonConnect` facade and RPC methods
-- [ ] Universal links and deep links
+- [ ] `TonConnect` facade
 - [ ] `ton_connect_ui` — wallet-picker modal
 - [ ] Example: offline merchant terminal
 

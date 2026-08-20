@@ -1,8 +1,6 @@
 import 'package:test/test.dart';
+import 'package:ton_connect/testing.dart';
 import 'package:ton_connect/ton_connect.dart';
-
-import 'support/fake_injected_bridge.dart';
-import 'support/fake_wallet.dart';
 
 const ConnectRequest request = ConnectRequest(
   manifestUrl: 'https://example.org/tonconnect-manifest.json',

@@ -1,6 +1,7 @@
 import 'dart:async';
 
-import 'package:ton_connect/ton_connect.dart';
+import '../transport/bridge/sse_event.dart';
+import '../transport/bridge/sse_transport.dart';
 
 /// An [SseTransport] that hands the test direct control of each connection.
 final class FakeSseTransport implements SseTransport {

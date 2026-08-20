@@ -4,10 +4,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:test/test.dart';
+import 'package:ton_connect/testing.dart';
 import 'package:ton_connect/ton_connect.dart';
-
-import 'support/fake_sse_transport.dart';
-import 'support/fake_wallet.dart';
 
 const String manifestUrl = 'https://example.org/tonconnect-manifest.json';
 

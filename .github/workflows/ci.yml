@@ -11,19 +11,32 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: dart-lang/setup-dart@v1
+      # The workspace contains a Flutter package, so the Flutter SDK resolves it
+      # all; the Dart SDK alone cannot.
+      - uses: subosito/flutter-action@v2
         with:
-          sdk: stable
+          channel: stable
+          cache: true
 
       - name: Install dependencies
-        run: dart pub get
+        run: flutter pub get
 
       - name: Verify formatting
         run: dart format --output=none --set-exit-if-changed .
 
       - name: Analyze
-        run: dart analyze --fatal-infos
+        run: flutter analyze
 
       # The workspace root has no test/ directory, so tests run per package.
-      - name: Run tests
+      - name: Test ton_connect
         run: dart test packages/ton_connect
+
+      - name: Test ton_connect_ui
+        run: flutter test
+        working-directory: packages/ton_connect_ui
+
+      # The web transports are chosen by conditional import and never execute on
+      # the VM, so compiling for the web is what proves they still build.
+      - name: Compile for the web
+        run: dart compile js -o build/web_smoke.js tool/web_smoke.dart
+        working-directory: packages/ton_connect

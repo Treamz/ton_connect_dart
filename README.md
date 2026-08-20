@@ -21,7 +21,7 @@ The goal is a Dart SDK that implements the protocol as it is today, with a moder
 | Package | What it is | State |
 |---|---|---|
 | `ton_connect` | Pure Dart core: encrypted sessions, HTTP bridge, injected JS bridge, wallet registry, universal links | in progress |
-| `ton_connect_ui` | Flutter wallet-picker modal and native universal-link return handling | not started |
+| `ton_connect_ui` | Flutter wallet-picker modal, QR and deep-link connect flows | in progress |
 
 Both target mobile **and** Web / Telegram Mini Apps. The core carries two transports from the start: the encrypted HTTP bridge, and the injected `window.<wallet>.tonconnect` binding used when a dApp runs inside a wallet's webview.
 
@@ -107,7 +107,7 @@ dart analyze && dart test packages/ton_connect
 - [x] Wallet registry — fetch, cache, platform filtering
 - [x] `TonConnect` facade — connect, send, sign, restore, disconnect
 - [x] Injected provider for Telegram Mini Apps and wallet browsers
-- [ ] `ton_connect_ui` — wallet-picker modal
+- [x] `ton_connect_ui` — wallet-picker modal, QR, deep links
 - [ ] Example: offline merchant terminal
 
 ## License

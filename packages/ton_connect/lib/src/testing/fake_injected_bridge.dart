@@ -1,9 +1,10 @@
 import 'dart:async';
 
-import 'package:ton_connect/ton_connect.dart';
+import '../transport/injected/injected_bridge.dart';
 
 /// An [InjectedBridge] the test drives directly.
 final class FakeInjectedBridge implements InjectedBridge {
+  /// Creates a fake injected binding.
   FakeInjectedBridge({
     this.key = 'tonkeeper',
     this.protocolVersion = 2,

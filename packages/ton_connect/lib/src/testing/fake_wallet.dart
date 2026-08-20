@@ -1,16 +1,19 @@
 import 'dart:convert';
 
-import 'package:ton_connect/ton_connect.dart';
+import '../crypto/session_crypto.dart';
 
 /// Stands in for the wallet side of a session.
 ///
 /// Holds a real [SessionCrypto], so everything it produces is encrypted the
 /// way a wallet would encrypt it rather than hand-waved past.
 final class FakeWallet {
+  /// Creates a wallet with a fresh session keypair.
   FakeWallet() : crypto = SessionCrypto();
 
+  /// This wallet's session keypair.
   final SessionCrypto crypto;
 
+  /// This wallet's `client_id`.
   String get clientId => crypto.sessionId;
 
   /// Builds a bridge envelope carrying [payload] encrypted for [dAppClientId].
@@ -67,15 +70,19 @@ final class FakeWallet {
     },
   };
 
+  /// A `connect_error` event. Code 300 is a user decline; 100 is an
+  /// unrecognised dApp.
   Map<String, Object?> connectError({int id = 1, int code = 300}) => {
     'event': 'connect_error',
     'id': id,
     'payload': {'code': code, 'message': 'User declined the connection'},
   };
 
+  /// A successful response to the request with [requestId].
   Map<String, Object?> response(String requestId, {String result = 'te6ccg'}) =>
       {'result': result, 'id': requestId};
 
+  /// A failed response to the request with [requestId].
   Map<String, Object?> errorResponse(
     String requestId, {
     int code = 300,
@@ -85,6 +92,7 @@ final class FakeWallet {
     'id': requestId,
   };
 
+  /// A wallet-initiated `disconnect` event.
   Map<String, Object?> disconnectEvent({int id = 2}) => {
     'event': 'disconnect',
     'id': id,

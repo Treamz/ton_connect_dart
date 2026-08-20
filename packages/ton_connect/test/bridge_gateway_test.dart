@@ -5,9 +5,8 @@ import 'package:fake_async/fake_async.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:test/test.dart';
+import 'package:ton_connect/testing.dart';
 import 'package:ton_connect/ton_connect.dart';
-
-import 'support/fake_sse_transport.dart';
 
 const String clientId =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';

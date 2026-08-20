@@ -35,6 +35,8 @@ Both target mobile **and** Web / Telegram Mini Apps. The core carries two transp
 
 **Transport parsing is separable from I/O.** The SSE framing logic is a pure `StreamTransformer` over lines, so the bridge's edge cases — multi-line `data`, `id` carry-forward, truncated trailing events, heartbeat frames — are tested without a server.
 
+**Reconnection lives in one place, and knows which place that is.** On native platforms the gateway owns retry: exponential backoff with full jitter, replay from `last_event_id`, and a watchdog that treats silence past the keep-alive window as a dead connection — the case where a phone switches networks and the socket never notices. In the browser, `EventSource` already does all of this, so the transport declares that it self-heals and the gateway stands down rather than opening a second connection alongside it.
+
 ## Development
 
 Requires Dart 3.12+. The repository is a pub workspace; there is no `melos`.
@@ -52,8 +54,8 @@ dart analyze && dart test
 - [x] Session crypto — X25519 keypairs, `crypto_box`, session restore
 - [x] Protocol models — connect request/event, `DeviceInfo`, features, `ton_proof`, error codes
 - [x] SSE framing
-- [ ] SSE connection — `dart:io` and browser `EventSource`
-- [ ] `BridgeGateway` — reconnect with `last_event_id`, heartbeat handling
+- [x] SSE connection — `dart:io` and browser `EventSource`
+- [x] `BridgeGateway` — reconnect with `last_event_id`, heartbeat handling
 - [ ] Bridge and injected providers
 - [ ] Wallet registry
 - [ ] `TonConnect` facade and RPC methods

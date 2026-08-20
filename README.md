@@ -45,8 +45,10 @@ Requires Dart 3.12+. The repository is a pub workspace; there is no `melos`.
 dart pub get
 ```
 
+The workspace root has no `test/` directory, so tests run per package:
+
 ```bash
-dart analyze && dart test
+dart analyze && dart test packages/ton_connect
 ```
 
 ## Roadmap
